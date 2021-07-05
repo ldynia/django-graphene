@@ -16,6 +16,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'graphene_django',
+    'demo',
 ]
 
 MIDDLEWARE = [
@@ -89,3 +91,7 @@ USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+
+GRAPHENE = {
+    'SCHEMA': 'app.schema.schema'
+}
