@@ -1,17 +1,20 @@
 #!/bin/sh
 
-CONTAINER_IP=$(ip addr | grep inet | tail -n1 | awk '{print $2}' |  cut -d'/' -f1)
+export CONTAINER_IP=$(hostname -i)
+export CONTAINER_GATEWAY=$(hostname -i | sed 's/.$/1/')
+echo "Container Gateway: $CONTAINER_GATEWAY"
 echo "Container IP: $CONTAINER_IP"
 
 echo "Install requirements.txt"
-pip install -r /app/requirements.txt --no-cache-dir
+pip install -U pip -r /app/requirements.txt --no-cache-dir
 
-# echo "Run migrations"
-# python /app/manage.py migrate
+echo "Run migrations"
+python /app/manage.py makemigrations
+python /app/manage.py migrate
+python /app/manage.py collectstatic --noinput
 
-# if args empty
-if [ -z "$@" ]
-then
+# no args empty
+if [ -z "$@" ]; then
     echo "Run Server"
     python /app/manage.py runserver 0.0.0.0:$PORT
 else

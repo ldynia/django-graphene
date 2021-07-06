@@ -20,3 +20,16 @@ class Movie(models.Model):
 
     def __str__(self):
         return self.title
+
+class Country(models.Model):
+    name = models.CharField(blank=False, null=False, max_length=255)
+
+
+class State(models.Model):
+    name = models.CharField(blank=False, null=False, max_length=255)
+    country = models.ForeignKey(Country, on_delete=models.CASCADE)
+
+
+class City(models.Model):
+    name = models.CharField(blank=False, null=False, max_length=255)
+    state = models.ForeignKey(State, on_delete=models.CASCADE)

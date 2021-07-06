@@ -1,12 +1,13 @@
-import random
 import requests
-import uuid
 import json
 
 from django.core.management.base import BaseCommand
 
 from demo.models import Movie
 from demo.models import Actor
+from demo.models import Country
+from demo.models import State
+from demo.models import City
 
 
 class Command(BaseCommand):
@@ -14,7 +15,20 @@ class Command(BaseCommand):
     help = 'Seed database'
 
     def handle(self, *args, **options):
+        self.__seed_locations()
         self.__seed_moives()
+
+    def __seed_locations(self):
+        print('Start saving locations.')
+
+        with open('/app/demo/management/commands/data/locations.json') as file:
+            locations = json.loads(file.read())
+            for location in locations:
+                country, created = Country.objects.get_or_create(name=location['country'])
+                state, created = State.objects.get_or_create(name=location['state'], country=country)
+                city, created = City.objects.get_or_create(name=location['city'], state=state)
+
+        print('Done saving locations.')
 
     def __seed_moives(self):
         print('Start saving movies.')

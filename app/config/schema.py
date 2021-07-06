@@ -1,15 +1,14 @@
-from graphene_django import DjangoObjectType
 import graphene
 
-
-class User(DjangoObjectType):
-
-    class Meta:
-        model = UserModel
+from demo.schema import CountryQuery
 
 
-class Query(graphene.ObjectType):
-    users = graphene.List(User)
+class Query(CountryQuery, graphene.ObjectType):
+    pass
 
-    def resolve_users(self, info):
-        return UserModel.objects.all()
+
+class Mutation(graphene.ObjectType):
+    pass
+
+
+schema = graphene.Schema(query=Query)
