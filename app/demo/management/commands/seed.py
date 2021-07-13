@@ -2,12 +2,15 @@ import requests
 import json
 
 from django.core.management.base import BaseCommand
+from uuid import uuid4
 
-from demo.models import Movie
 from demo.models import Actor
-from demo.models import Country
-from demo.models import State
 from demo.models import City
+from demo.models import Continent
+from demo.models import Country
+from demo.models import District
+from demo.models import Movie
+from demo.models import State
 
 
 class Command(BaseCommand):
@@ -23,10 +26,13 @@ class Command(BaseCommand):
 
         with open('/app/demo/management/commands/data/locations.json') as file:
             locations = json.loads(file.read())
+            continent, created = Continent.objects.get_or_create(name='North America')
+            country, created = Country.objects.get_or_create(name='USA', continent=continent)
             for location in locations:
-                country, created = Country.objects.get_or_create(name=location['country'])
                 state, created = State.objects.get_or_create(name=location['state'], country=country)
                 city, created = City.objects.get_or_create(name=location['city'], state=state)
+                districts = [District(city=city, name=str(uuid4()).split('-')[-1]) for _ in range(3)]
+                District.objects.bulk_create(districts)
 
         print('Done saving locations.')
 

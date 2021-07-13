@@ -21,8 +21,14 @@ class Movie(models.Model):
     def __str__(self):
         return self.title
 
+
+class Continent(models.Model):
+    name = models.CharField(blank=False, null=False, max_length=255)
+
+
 class Country(models.Model):
     name = models.CharField(blank=False, null=False, max_length=255)
+    continent = models.ForeignKey(Continent, on_delete=models.CASCADE)
 
 
 class State(models.Model):
@@ -33,3 +39,8 @@ class State(models.Model):
 class City(models.Model):
     name = models.CharField(blank=False, null=False, max_length=255)
     state = models.ForeignKey(State, on_delete=models.CASCADE)
+
+
+class District(models.Model):
+    name = models.CharField(blank=False, null=False, max_length=255)
+    city = models.ForeignKey(City, on_delete=models.CASCADE)

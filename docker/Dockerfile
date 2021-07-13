@@ -11,7 +11,8 @@ COPY . /app
 RUN apt-get update && apt-get install -y \
     curl \
     git \
-    gcc
+    gcc \
+    vim
 
 # Fixed permissions, create exec:exec and dev:dev
 RUN sed -i '/999/d;' /etc/group && \
