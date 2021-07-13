@@ -43,4 +43,5 @@ class City(models.Model):
 
 class District(models.Model):
     name = models.CharField(blank=False, null=False, max_length=255)
-    city = models.ForeignKey(City, on_delete=models.CASCADE)
+    # city = models.ForeignKey(City, on_delete=models.CASCADE)
+    city = models.ForeignKey(City, related_name='district', on_delete=models.CASCADE)
