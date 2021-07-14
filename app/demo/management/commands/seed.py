@@ -1,5 +1,6 @@
 import requests
 import json
+import names
 
 from django.core.management.base import BaseCommand
 from uuid import uuid4
@@ -10,6 +11,7 @@ from demo.models import Continent
 from demo.models import Country
 from demo.models import District
 from demo.models import Movie
+from demo.models import Mayor
 from demo.models import State
 
 
@@ -28,9 +30,11 @@ class Command(BaseCommand):
             locations = json.loads(file.read())
             continent, created = Continent.objects.get_or_create(name='North America')
             country, created = Country.objects.get_or_create(name='USA', continent=continent)
+
             for location in locations:
                 state, created = State.objects.get_or_create(name=location['state'], country=country)
                 city, created = City.objects.get_or_create(name=location['city'], state=state)
+                mayor, created = Mayor.objects.get_or_create(city=city, first_name=names.get_first_name(), last_name=names.get_last_name())
                 districts = [District(city=city, name=str(uuid4()).split('-')[-1]) for _ in range(3)]
                 District.objects.bulk_create(districts)
 

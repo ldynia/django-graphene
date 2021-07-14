@@ -27,21 +27,30 @@ class Continent(models.Model):
 
 
 class Country(models.Model):
-    name = models.CharField(blank=False, null=False, max_length=255)
     continent = models.ForeignKey(Continent, on_delete=models.CASCADE)
+    name = models.CharField(blank=False, null=False, max_length=255)
 
 
 class State(models.Model):
-    name = models.CharField(blank=False, null=False, max_length=255)
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
+    name = models.CharField(blank=False, null=False, max_length=255)
 
 
 class City(models.Model):
-    name = models.CharField(blank=False, null=False, max_length=255)
     state = models.ForeignKey(State, on_delete=models.CASCADE)
+    name = models.CharField(blank=False, null=False, max_length=255)
 
 
 class District(models.Model):
-    name = models.CharField(blank=False, null=False, max_length=255)
-    # city = models.ForeignKey(City, on_delete=models.CASCADE)
     city = models.ForeignKey(City, related_name='district', on_delete=models.CASCADE)
+    name = models.CharField(blank=False, null=False, max_length=255)
+
+
+class Mayor(models.Model):
+    city = models.OneToOneField(City, primary_key=True, related_name='mayor', on_delete=models.CASCADE)
+    first_name = models.CharField(blank=False, null=False, max_length=32)
+    last_name = models.CharField(blank=False, null=False, max_length=32)
+
+    @property
+    def full_name(self):
+        return self.first_name + ' ' + self.last_name

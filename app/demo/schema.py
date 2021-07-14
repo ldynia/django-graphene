@@ -8,6 +8,7 @@ from demo.models import City
 from demo.models import Continent
 from demo.models import Country
 from demo.models import District
+from demo.models import Mayor
 from demo.models import State
 from demo.gql.query_optimizer import GQOptimizer
 
@@ -35,6 +36,11 @@ class DistrictType(DjangoObjectType):
     class Meta:
         model = District
 
+class MayorType(DjangoObjectType):
+
+    class Meta:
+        model = Mayor
+
 
 class CityType(DjangoObjectType):
 
@@ -56,6 +62,6 @@ class CountryQuery(graphene.ObjectType):
         query = City.objects.all()[:3]
         return GQOptimizer(info).optimize(query)
 
-        # return City.objects.all()[:3]
+        # return gql_optimizer.query(City.objects.all()[:3], info)
 
-        # return gql_optimizer.query(City.objects.all(), info)
+        # return City.objects.all()[:3]

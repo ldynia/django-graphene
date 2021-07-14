@@ -1,17 +1,19 @@
 # # Graphene 2
 # django-debug-toolbar==3.2.1
-# git+https://github.com/jazzband/django-silk@master
 # Django==3.2
+# git+https://github.com/jazzband/django-silk@master
 # graphene-django-optimizer==0.8.0
 # graphene-django==2.15.0
+# names==0.3
 # psycopg2-binary==2.9.1
 # requests==2.25.1
 
 # Graphene 3
 django-debug-toolbar==3.2.1
-git+https://github.com/jazzband/django-silk@master
 Django==3.2
+git+https://github.com/jazzband/django-silk@master
 git+https://github.com/sebsasto/graphene-django-optimizer@master
 graphene-django==3.0.0b7
+names==0.3
 psycopg2-binary==2.9.1
 requests==2.25.1
