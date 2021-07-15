@@ -10,7 +10,8 @@ from demo.models import Country
 from demo.models import District
 from demo.models import Mayor
 from demo.models import State
-from demo.gql.query_optimizer import GQOptimizer
+# from demo.gql.query_optimizer import GQOptimizer
+from demo.gql.query_optimizer_v2 import GQOptimizer
 
 
 class ContinentType(DjangoObjectType):
