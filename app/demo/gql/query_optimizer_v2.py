@@ -38,7 +38,6 @@ query AllCities {
 """
 """
 FIXME: Uncomment mayor query and run the code. Fix this case!
-FIXME: has_leaves set to False on deep nested leaves
 TODO: Extract paths with has_leaves == False
 TODO: Normalize paths to match django notation of related models (model1__model2__model3)
 """
@@ -54,7 +53,6 @@ class GQOptimizer():
         self.gql_query = info.field_nodes[0].loc.source.body
         self.select_related = set()
         self.prefetch_related = set()
-
         print(self.gql_query)
 
     def optimize(self, queryset: QuerySet) -> QuerySet:
@@ -71,16 +69,17 @@ class GQOptimizer():
                 print('Iteration', iteration)
                 leaves = []
                 # Extract fields from root of the query
-                selections = self.info.field_nodes[0].selection_set.selections
-                for idx, selection in enumerate(selections):
+                selection_set = self.info.field_nodes[0].selection_set
+                for idx, selection in enumerate(selection_set.selections):
                     # Check if extracted field is a Type
                     if self.__filed_type(selection.name.value):
                         # Check for nested leaves inside selection
-                        selections = self.info.field_nodes[0] \
+                        selection_set = self.info.field_nodes[0] \
                             .selection_set.selections[idx] \
-                            .selection_set.selections
+                            .selection_set
 
-                        has_leaves = self.__selection_has_leaves(selections)
+                        # has_leaves = self.__selection_has_leaves(selections)
+                        has_leaves = self.__selection_has_leaves(selection_set)
 
                         # Create metadata filed
                         paths[iteration].append({
@@ -96,10 +95,7 @@ class GQOptimizer():
                         leaves.append(False)
 
                 # Check that leaves exist
-                section_has_leaves = any(leaves)
-                if section_has_leaves:
-                    has_leaves = True
-                    iteration += 1
+                has_leaves, iteration = self.__increment(iteration, leaves)
 
             # 2nd level of nesting
             if iteration == 1:
@@ -108,17 +104,18 @@ class GQOptimizer():
                 first_iteration = iteration - 1
                 for first_leaf_meta_field in paths[first_iteration]:
                     first_leaf_idx = first_leaf_meta_field['index']
-                    selections = self.info.field_nodes[0] \
+                    selection_set = self.info.field_nodes[0] \
                         .selection_set.selections[first_leaf_idx] \
-                        .selection_set.selections
-                    for idx, selection in enumerate(selections):
+                        .selection_set
+                    for idx, selection in enumerate(selection_set.selections):
                         if self.__filed_type(selection.name.value):
                             # Check for nested leaves inside selection
-                            selections = self.info.field_nodes[0] \
+                            selection_set = self.info.field_nodes[0] \
                                 .selection_set.selections[first_leaf_idx] \
                                 .selection_set.selections[idx] \
-                                .selection_set.selections
-                            has_leaves = self.__selection_has_leaves(selections)
+                                .selection_set
+
+                            has_leaves = self.__selection_has_leaves(selection_set)
 
                             # Create metadata filed and add it to current iteration
                             paths[iteration].append({
@@ -134,10 +131,7 @@ class GQOptimizer():
                             leaves.append(False)
 
                 # Check that leaves exist
-                section_has_leaves = any(leaves)
-                if section_has_leaves:
-                    has_leaves = True
-                    iteration += 1
+                has_leaves, iteration = self.__increment(iteration, leaves)
 
             # 3rd level of nesting
             if iteration == 2:
@@ -151,16 +145,22 @@ class GQOptimizer():
                         for second_leaf_meta_field in paths[second_iteration]:
                             second_leaf_idx = second_leaf_meta_field['index']
                             if second_leaf_meta_field['has_leaves']:
-                                selections = self.info.field_nodes[0] \
+                                selection_set = self.info.field_nodes[0] \
                                     .selection_set.selections[first_leaf_idx] \
                                     .selection_set.selections[second_leaf_idx] \
-                                    .selection_set.selections
-                                for idx, selection in enumerate(selections):
-                                    # Check for nested leaves inside selection
-                                    has_leaves = self.__selection_has_leaves(selections)
-
+                                    .selection_set
+                                for idx, selection in enumerate(selection_set.selections):
                                     # Create metadata filed and add it to current iteration
                                     if self.__filed_type(selection.name.value):
+                                        selection_set = self.info.field_nodes[0] \
+                                            .selection_set.selections[first_leaf_idx] \
+                                            .selection_set.selections[second_leaf_idx] \
+                                            .selection_set.selections[idx] \
+                                            .selection_set
+
+                                        # Check for nested leaves inside selection
+                                        has_leaves = self.__selection_has_leaves(selection_set)
+
                                         paths[iteration].append({
                                             'has_leaves': has_leaves,
                                             'index': idx,
@@ -173,10 +173,7 @@ class GQOptimizer():
                                     else:
                                         leaves.append(False)
                 # Check that leaves exist
-                section_has_leaves = any(leaves)
-                if section_has_leaves:
-                    has_leaves = True
-                    iteration += 1
+                has_leaves, iteration = self.__increment(iteration, leaves)
 
             # 4th level of nesting
             if iteration == 3:
@@ -193,17 +190,24 @@ class GQOptimizer():
                             for third_leaf_meta_field in paths[third_iteration]:
                                 third_leaf_idx = third_leaf_meta_field['index']
                                 if third_leaf_meta_field['has_leaves']:
-                                    selections = self.info.field_nodes[0] \
+                                    selection_set = self.info.field_nodes[0] \
                                         .selection_set.selections[first_leaf_idx] \
                                         .selection_set.selections[second_leaf_idx] \
                                         .selection_set.selections[third_leaf_idx] \
-                                        .selection_set.selections
-                                    for idx, selection in enumerate(selections):
-                                        # Check for nested leaves inside selection
-                                        has_leaves = self.__selection_has_leaves(selections)
-
+                                        .selection_set
+                                    for idx, selection in enumerate(selection_set.selections):
                                         # Create metadata filed and add it to current iteration
                                         if self.__filed_type(selection.name.value):
+                                            selection_set = self.info.field_nodes[0] \
+                                                .selection_set.selections[first_leaf_idx] \
+                                                .selection_set.selections[second_leaf_idx] \
+                                                .selection_set.selections[third_leaf_idx] \
+                                                .selection_set.selections[idx] \
+                                                .selection_set
+
+                                            # Check for nested leaves inside selection
+                                            has_leaves = self.__selection_has_leaves(selection_set)
+
                                             paths[iteration].append({
                                                 'has_leaves': has_leaves,
                                                 'index': idx,
@@ -216,10 +220,7 @@ class GQOptimizer():
                                         else:
                                             leaves.append(False)
                 # Check that leaves exist
-                section_has_leaves = any(leaves)
-                if section_has_leaves:
-                    has_leaves = True
-                    iteration += 1
+                has_leaves, iteration = self.__increment(iteration, leaves)
 
             # 5th level of nesting
             if iteration == 4:
@@ -239,18 +240,26 @@ class GQOptimizer():
                                 for fourth_leaf_meta_field in paths[fourth_iteration]:
                                     fourth_leaf_idx = fourth_leaf_meta_field['index']
                                     if third_leaf_meta_field['has_leaves']:
-                                        selections = self.info.field_nodes[0] \
+                                        selection_set = self.info.field_nodes[0] \
                                             .selection_set.selections[first_leaf_idx] \
                                             .selection_set.selections[second_leaf_idx] \
                                             .selection_set.selections[third_leaf_idx] \
                                             .selection_set.selections[fourth_leaf_idx] \
-                                            .selection_set.selections
-                                        for idx, selection in enumerate(selections):
-                                            # Check for nested leaves inside selection
-                                            has_leaves = self.__selection_has_leaves(selections)
-
+                                            .selection_set
+                                        for idx, selection in enumerate(selection_set.selections):
                                             # Create metadata filed and add it to current iteration
                                             if self.__filed_type(selection.name.value):
+                                                selection_set = self.info.field_nodes[0] \
+                                                    .selection_set.selections[first_leaf_idx] \
+                                                    .selection_set.selections[second_leaf_idx] \
+                                                    .selection_set.selections[third_leaf_idx] \
+                                                    .selection_set.selections[fourth_leaf_idx] \
+                                                    .selection_set.selections[idx] \
+                                                    .selection_set
+
+                                                # Check for nested leaves inside selection
+                                                has_leaves = self.__selection_has_leaves(selection_set)
+
                                                 paths[iteration].append({
                                                     'has_leaves': has_leaves,
                                                     'index': idx,
@@ -263,10 +272,7 @@ class GQOptimizer():
                                             else:
                                                 leaves.append(False)
                 # Check that leaves exist
-                section_has_leaves = any(leaves)
-                if section_has_leaves:
-                    has_leaves = True
-                    iteration += 1
+                has_leaves, iteration = self.__increment(iteration, leaves)
 
         print(json.dumps(paths, indent=2, sort_keys=False))
         return queryset
@@ -276,13 +282,17 @@ class GQOptimizer():
         for k, v in self.info.schema.type_map.items():
             print('Types', k, v)
 
-    def __selection_has_leaves(self, selections) -> bool:
+    def __increment(self, iteration: int, leaves: list) -> tuple:
+        """Check that section_has leaves"""
+        has_leaves = any(leaves)
+        if has_leaves:
+            iteration += 1
+        return (has_leaves, iteration)
+
+    def __selection_has_leaves(self, selection_set) -> bool:
         """Check if selection has leaves"""
-        has_leaves = False
-        for selection in selections:
-            print('selection.name.value', selection.name.value)
-            has_leaves = self.__filed_type(selection.name.value)
-        return has_leaves
+        selection = self.gql_query[selection_set.loc.start:selection_set.loc.end]
+        return selection.count('{') >= 2
 
     def __filed_type(self, field_name) -> bool:
         """Check if field name has its Type"""
