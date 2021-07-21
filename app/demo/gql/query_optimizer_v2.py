@@ -1,4 +1,5 @@
 import json
+from collections import Counter
 from collections import defaultdict
 
 from django.db.models.query import QuerySet
@@ -38,10 +39,8 @@ query AllCities {
 """
 """
 FIXME: Uncomment mayor query and run the code. Fix this case!
-TODO: Extract paths with has_leaves == False
-TODO: Normalize paths to match django notation of related models (model1__model2__model3)
+TODO: Test extracted paths and figuroute if it is select related or prefetch related
 """
-
 
 class GQOptimizer():
     """
@@ -55,7 +54,42 @@ class GQOptimizer():
         self.prefetch_related = set()
         print(self.gql_query)
 
-    def optimize(self, queryset: QuerySet) -> QuerySet:
+    def optimize(self, queryset: QuerySet, stop_fields=[]) -> QuerySet:
+        self.stop_fields = stop_fields
+
+        paths = self.__extract_paths()
+        print('before normalization', paths)
+        if self.stop_fields:
+            paths = self.__normalize_paths(paths)
+            print('normalized paths', paths)
+
+        return queryset
+
+    def print_types(self):
+        """Print all graphql types"""
+        for k, v in self.info.schema.type_map.items():
+            print('Types', k, v)
+
+    def __normalize_paths(self, paths: list):
+        normalized_paths = []
+        for stop_field in self.stop_fields:
+            for path in paths:
+                path = path.replace(stop_field, '')
+                path = path.strip('_')
+                models = path.split('__')
+                if len(models) == 1:
+                    normalized_paths.append(path)
+                else:
+                    models_count = dict(Counter(models))
+                    for model, count in models_count.items():
+                        if count >= 2:
+                            path = model.join(path.split(model, 2)[:2])
+                            path = path.strip('_')
+                    normalized_paths.append(path)
+
+        return normalized_paths
+
+    def __extract_paths(self):
         root = self.info.field_name
         paths = defaultdict(list)
 
@@ -275,12 +309,14 @@ class GQOptimizer():
                 has_leaves, iteration = self.__increment(iteration, leaves)
 
         print(json.dumps(paths, indent=2, sort_keys=False))
-        return queryset
 
-    def print_types(self):
-        """Print all graphql types"""
-        for k, v in self.info.schema.type_map.items():
-            print('Types', k, v)
+        filtered_paths = set()
+        for paths in paths.values():
+            for field in paths:
+                if not field['has_leaves']:
+                    filtered_paths.add(field['selection'])
+
+        return filtered_paths
 
     def __increment(self, iteration: int, leaves: list) -> tuple:
         """Check that section_has leaves"""

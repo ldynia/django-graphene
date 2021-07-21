@@ -61,7 +61,7 @@ class CountryQuery(graphene.ObjectType):
         # return query_optimizer(City.objects.all()[:3], info)
 
         query = City.objects.all()[:3]
-        return GQOptimizer(info).optimize(query)
+        return GQOptimizer(info).optimize(query, ['allCities'])
 
         # return gql_optimizer.query(City.objects.all()[:3], info)
 
