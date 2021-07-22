@@ -54,15 +54,5 @@ class CountryQuery(graphene.ObjectType):
     all_cities = graphene.List(CityType)
 
     def resolve_all_cities(self, info):
-        # return City.objects.all()[:50]
-        # return City.objects.all().prefetch_related('state__country')
-        # return City.objects.all().select_related('state__country')
-        # return City.objects.all().select_related('state__country_continent')
-        # return query_optimizer(City.objects.all()[:3], info)
-
-        query = City.objects.all()[:3]
-        return GQOptimizer(info).optimize(query, ['allCities'])
-
-        # return gql_optimizer.query(City.objects.all()[:3], info)
-
-        # return City.objects.all()[:3]
+        return GQOptimizer(info).optimize(City.objects.all()[:10], ['allCities'])
+        # return gql_optimizer.query(City.objects.all()[:10], info)

@@ -17,6 +17,8 @@ python /app/manage.py collectstatic --noinput
 if [ -z "$@" ]; then
     echo "Run Server"
     python /app/manage.py runserver 0.0.0.0:$PORT
+    # gunicorn config.wsgi:application --reload -t 3600 -w 8 -b 0.0.0.0:$PORT
+
 else
     echo "Executeing \$@ command: $@"
     exec $@

@@ -3,6 +3,12 @@ from collections import Counter
 from collections import defaultdict
 
 from django.db.models.query import QuerySet
+from django.core.exceptions import FieldError
+from django.db.models.fields.related import ForeignKey
+from django.db.models.fields.related import ManyToManyField
+from django.db.models.fields.reverse_related import ManyToManyRel
+from django.db.models.fields.reverse_related import ManyToOneRel
+from django.db.models.fields.reverse_related import OneToOneRel
 
 """
 query AllCities {
@@ -37,10 +43,8 @@ query AllCities {
   }
 }
 """
-"""
-FIXME: Uncomment mayor query and run the code. Fix this case!
-TODO: Test extracted paths and figuroute if it is select related or prefetch related
-"""
+
+# FIXME: Uncomment mayor query and run the code. Fix this case!
 
 class GQOptimizer():
     """
@@ -61,7 +65,35 @@ class GQOptimizer():
         print('before normalization', paths)
         if self.stop_fields:
             paths = self.__normalize_paths(paths)
-            print('normalized paths', paths)
+        print('normalized paths', paths)
+
+        select_related = []
+        prefetch_related = []
+        for path in paths:
+            # Get first model fro the model relations path
+            first_model = path
+            if '__' in path:
+                first_model = path.split('__')[0]
+
+            # Extract filed from first model
+            field = queryset.model._meta.get_field(first_model)
+
+            # Select related models
+            if isinstance(field, (ForeignKey, ManyToManyField, OneToOneRel)):
+                select_related.append(path)
+
+            # Prefetch related models
+            if isinstance(field, (ManyToOneRel, ManyToManyRel)):
+                if path not in select_related:
+                    prefetch_related.append(path)
+
+        print(f'Select related: {select_related}')
+        if select_related:
+            queryset = queryset.select_related(*select_related)
+
+        print(f'Prefetch_related: {prefetch_related}')
+        if prefetch_related:
+            queryset = queryset.prefetch_related(*prefetch_related)
 
         return queryset
 
