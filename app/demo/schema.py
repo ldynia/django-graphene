@@ -10,8 +10,11 @@ from demo.models import Country
 from demo.models import District
 from demo.models import Mayor
 from demo.models import State
+
 # from demo.gql.query_optimizer import GQOptimizer
-from demo.gql.query_optimizer_v2 import GQOptimizer
+# from demo.gql.query_optimizer_v2 import GQOptimizer
+# from demo.gql.query_optimizer_martin import optimizer as GQOptimizer
+from demo.gql.query_optimizer_v3 import optimizer as GQOptimizer
 
 
 class ContinentType(DjangoObjectType):
@@ -54,5 +57,6 @@ class CountryQuery(graphene.ObjectType):
     all_cities = graphene.List(CityType)
 
     def resolve_all_cities(self, info):
-        return GQOptimizer(info).optimize(City.objects.all()[:10], ['allCities'])
+        return GQOptimizer(City.objects.all(), info)
+        # return GQOptimizer(info).optimize(City.objects.all()[:10], ['allCities'])
         # return gql_optimizer.query(City.objects.all()[:10], info)
