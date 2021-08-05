@@ -57,29 +57,35 @@ query AllCities {
 }
 """
 
-def optimizer(qs, info):
+def optimizer(qs, info, top_node=None):
     relations = []
     relations_prefixes = {
         'select_related': [],
         'prefetch_related': []
     }
 
-    for field in info.field_nodes[0].selection_set.selections:
+    if not top_node:
+        top_node = info.field_nodes[0]
+
+
+    for field in top_node.selection_set.selections:
         field_name = field.name.value
-        models_field = qs.model._meta.get_field(field_name)
-        # Check if field has nested models
-        if field.selection_set:
-            # Check if field is in select related relationship
-            if isinstance(models_field, (ForeignKey, ManyToManyField, OneToOneRel)):
-                relations_prefixes['select_related'].append(field_name)
+        # Check if filed exists on model
+        if hasattr(qs.model, field_name):
+            models_field = qs.model._meta.get_field(field_name)
+            # Check if field has nested models
+            if field.selection_set:
+                # Check if field is in select related relationship
+                if isinstance(models_field, (ForeignKey, ManyToManyField, OneToOneRel)):
+                    relations_prefixes['select_related'].append(field_name)
 
-            # Check if field is in prefetch related relationship
-            if isinstance(models_field, (ManyToOneRel, ManyToManyRel)):
-                relations_prefixes['prefetch_related'].append(field_name)
+                # Check if field is in prefetch related relationship
+                if isinstance(models_field, (ManyToOneRel, ManyToManyRel)):
+                    relations_prefixes['prefetch_related'].append(field_name)
 
-            # Append prefix to relations
-            prefix = extract_path(field, field_name)
-            relations.append(prefix)
+                # Append prefix to relations
+                prefix = extract_path(field, field_name)
+                relations.append(prefix)
 
     # Normalize paths in relations
     relations = normalize_paths(relations)
@@ -94,7 +100,7 @@ def optimizer(qs, info):
 
 def extract_path(field_node: FieldNode, prefix='') -> str:
     """
-    Recursively extract model name from select related field.
+    Recursively extract model name from from graphql query.
 
     :param FieldNode field_node: Field node is representing model.
     :param str prefix: Prefix is used to construct model relation paths.
@@ -124,10 +130,12 @@ def get_related(relations: list, relation_prefixes: dict) -> tuple:
     select_related = set()
     prefetch_related = set()
     for relation in relations:
+        # Construct select related fields.
         for srp in relation_prefixes['select_related']:
             if relation.startswith(srp):
                 select_related.add(relation)
 
+        # Construct prefetch related fields.
         for prp in relation_prefixes['prefetch_related']:
             if relation not in select_related and relation.startswith(prp):
                 prefetch_related.add(relation)
@@ -151,7 +159,7 @@ def normalize_paths(paths: list) -> list:
         else:
             models_count = dict(Counter(models))
             for model, count in models_count.items():
-                # Remove duplicated models from graphql path
+                # Remove duplicated models from graphql path.
                 if count >= 2:
                     path = model.join(path.split(model, 2)[:2])
                     path = path.strip('_')
