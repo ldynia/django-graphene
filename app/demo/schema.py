@@ -53,11 +53,31 @@ class CityType(DjangoObjectType):
         model = City
 
 
+import cProfile, pstats
+from silk.profiling.profiler import silk_profile
+
+
 class CountryQuery(graphene.ObjectType):
 
     all_cities = graphene.List(CityType)
 
     def resolve_all_cities(self, info):
-        return optimizer(City.objects.all(), info)
+        # profiler = cProfile.Profile()
+        # profiler.enable()
+        qs = optimizer(City.objects.all(), info)
+        # profiler.disable()
+        # stats = pstats.Stats(profiler)
+        # stats.print_stats()
+        return qs
         # return GQOptimizer(info).optimize(City.objects.all(), ['allCities'])
         # return gql_optimizer.query(City.objects.all(), info)
+
+
+def test_time(self):
+    payload = """"""
+    profiler = cProfile.Profile()
+    profiler.enable()
+    self.query(payload)
+    profiler.disable()
+    stats = pstats.Stats(profiler)
+    stats.print_stats()
