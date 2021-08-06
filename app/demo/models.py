@@ -31,8 +31,13 @@ class Country(models.Model):
     name = models.CharField(blank=False, null=False, max_length=255)
 
 
+class Governor(models.Model):
+    name = models.CharField(blank=False, null=False, max_length=255)
+
+
 class State(models.Model):
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
+    governor = models.OneToOneField(Governor, on_delete=models.CASCADE)
     name = models.CharField(blank=False, null=False, max_length=255)
 
 

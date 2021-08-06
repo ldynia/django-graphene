@@ -1,6 +1,8 @@
-import requests
 import json
 import names
+import random
+import requests
+import uuid
 
 from django.core.management.base import BaseCommand
 from uuid import uuid4
@@ -13,6 +15,7 @@ from demo.models import District
 from demo.models import Movie
 from demo.models import Mayor
 from demo.models import State
+from demo.models import Governor
 
 
 class Command(BaseCommand):
@@ -21,7 +24,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.__seed_locations()
-        self.__seed_moives()
+        # self.__seed_moives()
 
     def __seed_locations(self):
         print('Start saving locations.')
@@ -32,7 +35,8 @@ class Command(BaseCommand):
             country, created = Country.objects.get_or_create(name='USA', continent=continent)
 
             for location in locations:
-                state, created = State.objects.get_or_create(name=location['state'], country=country)
+                governor, created = Governor.objects.get_or_create(name=str(uuid.uuid4()).split('-')[0])
+                state, created = State.objects.get_or_create(name=location['state'], country=country, governor=governor)
                 city, created = City.objects.get_or_create(name=location['city'], state=state)
                 mayor, created = Mayor.objects.get_or_create(city=city, first_name=names.get_first_name(), last_name=names.get_last_name())
                 districts = [District(city=city, name=str(uuid4()).split('-')[-1]) for _ in range(3)]

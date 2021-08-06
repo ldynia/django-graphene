@@ -8,6 +8,7 @@ from demo.models import City
 from demo.models import Continent
 from demo.models import Country
 from demo.models import District
+from demo.models import Governor
 from demo.models import Mayor
 from demo.models import State
 
@@ -51,6 +52,12 @@ class CityType(DjangoObjectType):
 
     class Meta:
         model = City
+
+
+class GovernorType(DjangoObjectType):
+
+    class Meta:
+        model = Governor
 
 
 import cProfile, pstats
