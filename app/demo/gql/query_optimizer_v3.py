@@ -5,8 +5,43 @@ from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.db.models.fields.reverse_related import OneToOneRel
+from django.db.models.query import QuerySet
+
+from graphql.language.ast import FieldNode
+from graphql.type.definition import GraphQLResolveInfo
 
 
+"""
+query AllCities {
+  allCities {
+    state {
+      governor {
+        name
+      }
+      country {
+        name
+      }
+    }
+  }
+}
+"""
+"""
+query AllCities {
+  allCities {
+    district {
+      city {
+        mayor {
+          city {
+            district {
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+}
+"""
 """
 query AllCities {
   allCities {
@@ -14,6 +49,12 @@ query AllCities {
     name
     state {
       name
+      governor {
+        name
+      }
+      country {
+        name
+      }
     }
     mayor {
       firstName
@@ -40,126 +81,117 @@ query AllCities {
   }
 }
 """
-"""
-query {
-  allLibrary {
-    results {
-      book {
-        authors {
-          fullName
-        }
-        owner {
-          firstName
-        }
-      }
-    }
-  }
-}
-"""
 
-def optimizer(qs, info, top_node=None):
-    relations = []
-    relations_prefixes = {
+
+def optimizer(qs: QuerySet, info: GraphQLResolveInfo, top_node: FieldNode=None):
+    """
+    This function optimizes queryset base on model relations extracted from graphql query.
+
+    :param QuerySet qs: QuerySet of a model to be optimized.
+    :param GraphQLResolveInfo info: GraphQL info context.
+    :param FieldNode qs: Filed Node to be iterated
+
+    :return: QuerySet:
+    """
+    model_relations = {
         'select_related': [],
         'prefetch_related': []
     }
 
+    # Set top_node to the very first filed node found in graphql query.
     if not top_node:
         top_node = info.field_nodes[0]
 
-    prefixes = []
+    prefix_nodes = []
     for field_node in top_node.selection_set.selections:
         field_name = field_node.name.value
-        # Check if filed exists on model
+        # Check if filed exists on model.
         if hasattr(qs.model, field_name):
             models_field = qs.model._meta.get_field(field_name)
-            # Check if field has nested models
+            # Check if field has nested models.
             if field_node.selection_set:
-                # Check if field is in select related relationship
-                if isinstance(models_field, (ForeignKey, ManyToManyField, OneToOneRel)):
-                    relations_prefixes['select_related'].append(field_name)
+                # Check if field is in select related relationship.
+                if isinstance(models_field, (ForeignKey, OneToOneRel)):
+                    model_relations['select_related'].append(field_name)
 
-                # Check if field is in prefetch related relationship
-                if isinstance(models_field, (ManyToOneRel, ManyToManyRel)):
-                    relations_prefixes['prefetch_related'].append(field_name)
+                # Check if field is in prefetch related relationship.
+                if isinstance(models_field, (ManyToManyField, ManyToManyRel, ManyToOneRel)):
+                    model_relations['prefetch_related'].append(field_name)
 
                 # Prefix map
-                prefixes.append((field_name, field_node))
+                prefix_nodes.append((field_name, field_node))
 
-    # Append prefix to relations
-    relations = extract_path(prefixes)
+    # Extract and normalize paths representing relations betwean models.
+    paths = extract_path(prefix_nodes)
+    paths = normalize_paths(paths)
 
-    print('Before Normalization', relations)
-    # Normalize paths in relations
-    relations = normalize_paths(relations)
-    print('After Normalization', relations)
+    # Extract select_related and prefetch_related paths.
+    select_related, prefetch_related = get_related(paths, model_relations)
 
-    # Extract select_related and prefetch_related paths
-    select_related, prefetch_related = get_related(relations, relations_prefixes)
-    print('select_related', select_related)
-    print('prefetch_related', prefetch_related)
+    # Print related fields if they exist.
+    if select_related or prefetch_related:
+        print('select_related', select_related)
+        print('prefetch_related', prefetch_related)
 
-    return qs.select_related(*select_related).prefetch_related(*prefetch_related)[:10]
+    # Catch generic exception if execution of optimized query failed. Otherwise run unmodified query.
+    try:
+        return qs.select_related(*select_related).prefetch_related(*prefetch_related)
+    except Exception as err:
+        print(f'Error: Query optimizer failed due to: {err} error.')
+        print('Warning: Executing not optimized query instead. This might affect query performance.')
+        return qs
 
 
-def extract_path(prefixes=[], res=set()) -> str:
+def extract_path(nodes=[], paths=set()) -> set:
     """
-    Recursively extract model name from from graphql query.
+    Function recursively extracts paths representing model relations extracted from graphql query.
 
-    :param FieldNode field_node: Field node is representing model.
-    :param str prefix: Prefix is used to construct model relation paths.
+    :param list nodes: List of FieldNodes. FieldNode is representing model to be extracted.
+    :param set paths: Paths is a set used to construct prefixes for model relation.
 
-    :return: str: relations between models
+    :return: set: Return set of strings containing paths of relations between models.
     """
+    # Normalize default paramters and solve problem explained in below link.
+    # link: https://florimond.dev/en/posts/2018/08/python-mutable-defaults-are-the-source-of-all-evil/
+    nodes = nodes if nodes else []
+    paths = paths if paths else set()
+
+    # sub_prefix is a temporary list to hold prefixes extracted from currently iterated node.
     sub_prefix = []
-    for prx in prefixes:
-        path, field_node = prx
-        # Field node has nested models
+    for node in nodes:
+        prefix, field_node = node
+        # Check if field node exist and has nested models.
         if field_node and field_node.selection_set:
             for sub_node in field_node.selection_set.selections:
                 if sub_node.selection_set:
-                    path = path + '__' + sub_node.name.value
-                    sub_prefix.append([path, sub_node])
+                    # Normalize prefix for fields that hold more than one model.
+                    prefix = prefix + '__' + sub_node.name.value
+                    if len(field_node.selection_set.selections) > 1:
+                        prefix = field_node.name.value + '__' + sub_node.name.value
+
+                    sub_prefix.append([prefix, sub_node])
                 else:
-                    sub_prefix.append([path, None])
-        # Field node doesn't have nested models
+                    sub_prefix.append([prefix, None])
+        # Field node doesn't have nested models.
         else:
-            res.add(path)
+            paths.add(prefix)
 
-    # Make recursive call only if there is a data
+    # Make recursive call only if there is data.
     if sub_prefix:
-        res = remove_duplicates(sub_prefix, res)
-        return extract_path(sub_prefix, res)
+        return extract_path(sub_prefix, paths)
 
-    return res
-
-    # prefix_subnode = []
-    # if field_node.selection_set:
-    #     for sub_node in field_node.selection_set.selections:
-    #         if sub_node.selection_set:
-    #             lp = field_node.name.value + '__' + sub_node.name.value
-    #             for prx in prefix:
-    #                 local_prefixes.append(prx + '__' + sub_node.name.value)
-    #     return extract_path(sub_node, prefix)
-    # return prefix
-
-
-def remove_duplicates(data: list, results: set) -> set:
-    for item in data:
-        results.discard(item[0])
-    return results
+    return paths
 
 
 def get_related(relations: list, relation_prefixes: dict) -> tuple:
     """
-    Match model relations base on the relation prefixes.
-    A relation prefix is a field name extracted from fields specified in 1st Field Node.
+    Function extracts select_related and prefetch_related paths from model prefix.
+    A model prefix is the field name extracted from top_node FileNode.
 
     :param list relations: Relations extracted from graphql query
-    :param dict relation_prefixes: This dict holds names of the fields,
-    for prefetch_related and select_related models.
+    :param dict relation_prefixes: Dict that holds names of prefetch_related and select_related fields.
 
-    :return: tuple: holds set of related fields. First element in tuple is select_related fields.
+    :return: tuple: Returns a set of related fields. First element in tuple is select_related fields.
     Second element in tuple is prefetch_related fields.
     """
     select_related = set()
@@ -180,11 +212,11 @@ def get_related(relations: list, relation_prefixes: dict) -> tuple:
 
 def normalize_paths(paths: list) -> list:
     """
-    Normalize paths extracted from graphql.
+    Function normalizes paths extracted from graphql query.
 
     :param list paths: List of paths to be normalized.
 
-    :return: list: Normalized paths.
+    :return: list: List of normalized paths.
     """
     normalized_paths = []
 
@@ -195,7 +227,7 @@ def normalize_paths(paths: list) -> list:
         else:
             models_count = dict(Counter(models))
             for model, count in models_count.items():
-                # Remove duplicated models from graphql path.
+                # If model appearsse more than 2 times in a path then remove duplicated model from it.
                 if count >= 2:
                     path = model.join(path.split(model, 2)[:2])
                     path = path.strip('_')
