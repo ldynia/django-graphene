@@ -15,7 +15,8 @@ from demo.models import State
 # from demo.gql.query_optimizer import GQOptimizer
 # from demo.gql.query_optimizer_v2 import GQOptimizer
 # from demo.gql.query_optimizer_martin import optimizer as GQOptimizer
-from demo.gql.query_optimizer_v3 import optimizer
+# from demo.gql.query_optimizer_v3 import optimizer
+from demo.gql.query_optimizer_v4 import optimizer
 
 
 class ContinentType(DjangoObjectType):
