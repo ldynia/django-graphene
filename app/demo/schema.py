@@ -71,7 +71,9 @@ class CountryQuery(graphene.ObjectType):
     def resolve_all_cities(self, info):
         # profiler = cProfile.Profile()
         # profiler.enable()
-        qs = optimizer(City.objects.all(), info)
+        top_node = info.field_nodes[0]
+        queryset = City.objects.all()
+        qs = optimizer(queryset, top_node)
         # profiler.disable()
         # stats = pstats.Stats(profiler)
         # stats.print_stats()
