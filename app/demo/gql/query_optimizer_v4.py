@@ -1,4 +1,5 @@
 import typing
+import stringcase
 
 from django.db.models import Model
 from django.db.models.fields.related import ForeignKey
@@ -19,11 +20,6 @@ def optimizer(qs: QuerySet, top_node: FieldNode):
     """
     # Get select and prefetch related field paths.
     select_related, prefetch_related = extract_field_paths(top_node, qs.model)
-
-    # Info print
-    if select_related or prefetch_related:
-        print('SELECT_RELATED', select_related)
-        print('PREFETCH_RELATED', prefetch_related)
 
     return qs.select_related(*select_related).prefetch_related(*prefetch_related)
 
@@ -47,22 +43,25 @@ def extract_field_paths(field_node: FieldNode, model: Model, prefix: str = '') -
         # Only nodes with additional sub-nodes are relevant.
         if sub_node.selection_set:
             # Get field name.
-            node_name = sub_node.name.value
+            node_name = stringcase.snakecase(sub_node.name.value)
 
             # Check if the node is a model field.
             if hasattr(model, node_name):
                 # Get model-field.
                 field = model._meta.get_field(node_name)
 
-                # Add one-to-N fields to select-fields else Add many-to-N fields to prefetch-fields.
+                # Add one-to-N fields to select-fields
                 if prefix == '' and isinstance(field, (OneToOneRel, ForeignKey)):
                     selected_fields.append(prefix + node_name)
+
+                # Add many-to-N fields to prefetch-fields.
                 else:
                     prefetch_fields.append(prefix + node_name)
 
                 # Update prefix and model.
                 new_prefix = prefix + node_name + '__'
                 new_model = field.related_model
+
             else:
                 # Use existing prefix and model.
                 new_prefix = prefix
