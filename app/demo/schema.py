@@ -1,7 +1,6 @@
 import graphene
 import graphene_django_optimizer as gql_optimizer
 
-from django.db import connection
 from graphene_django import DjangoObjectType
 
 from demo.models import City
@@ -12,11 +11,7 @@ from demo.models import Governor
 from demo.models import Mayor
 from demo.models import State
 
-# from demo.gql.query_optimizer import GQOptimizer
-# from demo.gql.query_optimizer_v2 import GQOptimizer
-# from demo.gql.query_optimizer_martin import optimizer as GQOptimizer
-# from demo.gql.query_optimizer_v3 import optimizer
-from demo.gql.query_optimizer_v4 import optimizer
+from django_gql_optimizer.optimizer import optimizer
 
 
 class ContinentType(DjangoObjectType):
@@ -61,33 +56,10 @@ class GovernorType(DjangoObjectType):
         model = Governor
 
 
-import cProfile, pstats
-from silk.profiling.profiler import silk_profile
-
-
 class CountryQuery(graphene.ObjectType):
 
     all_cities = graphene.List(CityType)
 
     def resolve_all_cities(self, info):
-        # profiler = cProfile.Profile()
-        # profiler.enable()
-        top_node = info.field_nodes[0]
-        queryset = City.objects.all()
-        qs = optimizer(queryset, top_node)
-        # profiler.disable()
-        # stats = pstats.Stats(profiler)
-        # stats.print_stats()
-        return qs
-        # return GQOptimizer(info).optimize(City.objects.all(), ['allCities'])
+        return optimizer(City.objects.all(), info.field_nodes[0])
         # return gql_optimizer.query(City.objects.all(), info)
-
-
-def test_time(self):
-    payload = """"""
-    profiler = cProfile.Profile()
-    profiler.enable()
-    self.query(payload)
-    profiler.disable()
-    stats = pstats.Stats(profiler)
-    stats.print_stats()
