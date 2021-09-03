@@ -24,7 +24,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.__seed_locations()
-        # self.__seed_moives()
+        self.__seed_moives()
 
     def __seed_locations(self):
         print('Start saving locations.')

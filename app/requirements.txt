@@ -15,7 +15,7 @@ django-debug-toolbar==3.2.1
 Django==3.2
 git+https://github.com/jazzband/django-silk@master
 git+https://github.com/sebsasto/graphene-django-optimizer@master
-git+https://github.com/ldynia/django-gql-optimizer@master
+git+https://github.com/ldynia/django-gql-optimizer@main
 graphene-django==3.0.0b7
 names==0.3
 psycopg2-binary==2.9.1
