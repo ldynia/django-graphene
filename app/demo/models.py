@@ -16,7 +16,7 @@ class Movie(models.Model):
     rating = models.FloatField(blank=True, null=True)
     year = models.PositiveSmallIntegerField(blank=True, null=True)
     genre = ArrayField(models.CharField(blank=True, max_length=255), size=16)
-    actors = models.ManyToManyField(Actor)
+    actors = models.ManyToManyField(Actor, related_name='movies')
 
     def __str__(self):
         return self.title
@@ -45,6 +45,8 @@ class City(models.Model):
     state = models.ForeignKey(State, on_delete=models.CASCADE)
     name = models.CharField(blank=False, null=False, max_length=255)
 
+    def __str__(self):
+        return self.name
 
 class District(models.Model):
     city = models.ForeignKey(City, related_name='district', on_delete=models.CASCADE)

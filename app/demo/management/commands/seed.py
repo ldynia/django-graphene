@@ -23,8 +23,8 @@ class Command(BaseCommand):
     help = 'Seed database'
 
     def handle(self, *args, **options):
-        self.__seed_locations()
         self.__seed_moives()
+        self.__seed_locations()
 
     def __seed_locations(self):
         print('Start saving locations.')
@@ -50,28 +50,31 @@ class Command(BaseCommand):
         with open('/app/demo/management/commands/data/movies.json') as file:
             movies = json.loads(file.read())
             for movie in movies:
-                print(movie['rank'], movie['title'])
                 url = f"http://omdbapi.com/?apikey=b1da61a5&t={movie['title']}"
-                r = requests.get(url)
-                for star in r.json()['Actors'].split(", "):
-                    try:
-                        first_name, *_, last_name = star.split(' ')
-                        actor, created = Actor.objects.get_or_create(
-                            first_name=first_name,
-                            last_name=last_name,
-                        )
-                    except ValueError as err:
-                        actor, created = Actor.objects.get_or_create(
-                            nick_name=star if star else None,
+                data = requests.get(url).json()
+                if 'Error' not in data:
+                    print(movie['rank'], movie['title'])
+                    for star in data['Actors'].split(", "):
+                        try:
+                            first_name, *_, last_name = star.split(' ')
+                            actor, created = Actor.objects.get_or_create(
+                                first_name=first_name,
+                                last_name=last_name,
+                            )
+                        except ValueError as err:
+                            actor, created = Actor.objects.get_or_create(
+                                nick_name=star if star else None,
+                            )
+
+                        movie, created = Movie.objects.get_or_create(
+                            title=data['Title'],
+                            rating=float(data['imdbRating']) if data['imdbRating'] != 'N/A' else 0,
+                            year=int(data['Year']),
+                            genre=data['Genre'].split(', '),
                         )
 
-                    movie, created = Movie.objects.get_or_create(
-                        title=r.json()['Title'],
-                        rating=float(r.json()['imdbRating']) if r.json()['imdbRating'] != 'N/A' else 0,
-                        year=int(r.json()['Year']),
-                        genre=r.json()['Genre'].split(', '),
-                    )
-
-                    movie.actors.add(actor)
+                        movie.actors.add(actor)
+                else:
+                    print('Skiped', movie['rank'], movie['title'])
 
         print('Done saving movies.')

@@ -11,12 +11,41 @@ from demo.models import Movie
 from demo.models import State
 
 
-admin.site.register(Actor)
-admin.site.register(City)
+class MovieAdmin(admin.ModelAdmin):
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).order_by('id')
+        return qs.prefetch_related('actors')
+
+
+class CompanyInline(admin.TabularInline):
+
+    model = Movie.actors.through
+
+
+class ActorAdmin(admin.ModelAdmin):
+
+    inlines = [CompanyInline]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).order_by('id')
+
+
+class CityAdmin(admin.ModelAdmin):
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).order_by('id')
+        return qs.select_related('state__country__continent', 'mayor').prefetch_related('district__city')
+
+# Film domain
+admin.site.register(Actor, ActorAdmin)
+admin.site.register(Movie, MovieAdmin)
+
+# City domain
+admin.site.register(City, CityAdmin)
 admin.site.register(Continent)
 admin.site.register(Country)
 admin.site.register(District)
 admin.site.register(Governor)
 admin.site.register(Mayor)
-admin.site.register(Movie)
 admin.site.register(State)
